@@ -74,6 +74,8 @@ namespace Invaders
                 game.RestartRequested();
             if (keysPressed.Contains(e.KeyCode))
                 keysPressed.Remove(e.KeyCode);
+            if (Configurables.ALLOW_ARBITRARY_SCORE_INCREASES && e.KeyCode == Keys.S)
+                game.AddScore(10);
             keysPressed.Add(e.KeyCode);
         }
 

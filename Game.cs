@@ -9,14 +9,14 @@ namespace Invaders
 {
     public class Game
     {
-        private int score;
+        private int score; // DO NOT SET DIRECTLY!!
         public int Score
         {
             get { return score; }
             set
             {
                 score = value;
-                if (score > Configurables.SCORE_THRESHOLD_FOR_FREE_1UP * (livesGainedDueToScore + 1))
+                if (ScoreLeftUntilFree1Up <= 5)
                 {
                     livesGainedDueToScore++;
                     livesLeft++;
@@ -24,7 +24,8 @@ namespace Invaders
             }
         }
         public int ScoreLeftUntilFree1Up { get {
-            return (Configurables.SCORE_THRESHOLD_FOR_FREE_1UP * (livesGainedDueToScore + 1)) - score;
+            return ((Configurables.SCORE_THRESHOLD_MULTIPLIER_FOR_FREE_1UP + (int)Math.Ceiling(Math.Log(livesGainedDueToScore + 0.01))) *
+                (livesGainedDueToScore + 1)) - score;
         } }
         private int livesLeft = 2;
         private int livesGainedDueToScore = 0;
@@ -93,6 +94,11 @@ namespace Invaders
                 g.DrawString("Press R to restart or Q to quit", hudFont, Brushes.White, new Point(clientRectangle.Width / 2 - 100,
                     clientRectangle.Height / 2 + 50));
             }
+        }
+
+        public void AddScore(int value)
+        {
+            Score += value;
         }
 
         private void UpdateShots()
