@@ -96,8 +96,8 @@ DocProject/Help/html
 # Click-Once directory
 publish
 
-# Others
-[Bb]in
+# Others ([Bb]in removed since we need it for the .exe to show up.)
+# [Bb]in
 [Oo]bj
 sql
 TestResults

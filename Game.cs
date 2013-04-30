@@ -24,7 +24,7 @@ namespace Invaders
             }
         }
         public int ScoreLeftUntilFree1Up { get {
-            return ((Configurables.SCORE_THRESHOLD_MULTIPLIER_FOR_FREE_1UP + (int)Math.Ceiling(Math.Log(livesGainedDueToScore + 0.01))) *
+            return ((Configurables.SCORE_THRESHOLD_MULTIPLIER_FOR_FREE_1UP + livesGainedDueToScore * 10) *
                 (livesGainedDueToScore + 1)) - score;
         } }
         private int livesLeft = 2;
