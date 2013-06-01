@@ -43,11 +43,16 @@ namespace Invaders
 
         private void drawSplashScreen(Graphics g)
         {
-            g.DrawString("INVADERS", new Font(FontFamily.GenericSansSerif, 72, FontStyle.Regular), Brushes.White,
-                     ClientRectangle.Width / 2 - 300, ClientRectangle.Height / 2 - 50);
-            g.DrawString("Press S to begin or Q to quit", new Font(FontFamily.GenericSansSerif, 14, FontStyle.Regular),
-                Brushes.White, new Point(ClientRectangle.Width / 2 - 100,
-                ClientRectangle.Height / 2 + 50));
+            const int SEPARATION = 50; // Half of the vertical separation between the two lines of text.
+            using (Font bigFont = new Font(FontFamily.GenericSansSerif, 72, FontStyle.Regular))
+                g.DrawString("INVADERS", bigFont, Brushes.White,
+                        new Point((int)(ClientRectangle.Width - g.MeasureString("INVADERS", bigFont).Width) / 2,
+                                   (int)(ClientRectangle.Height - g.MeasureString("INVADERS", bigFont).Height - SEPARATION) / 2));
+            using (Font smallerFont = new Font(FontFamily.GenericSansSerif, 14, FontStyle.Regular))
+                g.DrawString("Press S to begin or Q to quit", smallerFont, Brushes.White,
+                        new Point((int)(ClientRectangle.Width - g.MeasureString("Press S to begin or Q to quit", smallerFont).Width) / 2,
+                                   (int)(ClientRectangle.Height - g.MeasureString("Press S to begin or Q to quit",
+                                        smallerFont).Height + SEPARATION) / 2));
         }
 
         private void gameTimer_Tick(object sender, EventArgs e)

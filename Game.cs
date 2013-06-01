@@ -89,10 +89,16 @@ namespace Invaders
             }
             if (GameOver)
             {
-                g.DrawString("GAME OVER", new Font(FontFamily.GenericSansSerif, 72, FontStyle.Regular), Brushes.White,
-                    clientRectangle.Width / 2 - 300, clientRectangle.Height / 2 - 50);
-                g.DrawString("Press R to restart or Q to quit", hudFont, Brushes.White, new Point(clientRectangle.Width / 2 - 100,
-                    clientRectangle.Height / 2 + 50));
+                const int SEPARATION = 50; // Half of the vertical separation between the two lines of text.
+                using (Font bigFont = new Font(FontFamily.GenericSansSerif, 72, FontStyle.Regular))
+                    g.DrawString("GAME OVER", bigFont, Brushes.White,
+                            new Point((int)(clientRectangle.Width - g.MeasureString("GAME OVER", bigFont).Width) / 2,
+                                       (int)(clientRectangle.Height - g.MeasureString("GAME OVER", bigFont).Height - SEPARATION) / 2));
+                using (Font smallerFont = new Font(FontFamily.GenericSansSerif, 14, FontStyle.Regular))
+                    g.DrawString("Press R to restart or Q to quit", smallerFont, Brushes.White,
+                            new Point((int)(clientRectangle.Width - g.MeasureString("Press R to restart or Q to quit", smallerFont).Width) / 2,
+                                       (int)(clientRectangle.Height - g.MeasureString("Press R to restart or Q to quit",
+                                            smallerFont).Height + SEPARATION) / 2));
             }
         }
 
@@ -143,13 +149,15 @@ namespace Invaders
                 playerShip.Move(direction);
         }
 
+        private InvaderType[] lookup = {InvaderType.Bug, InvaderType.FlyingSaucer, InvaderType.Satellite,
+                                                 InvaderType.Star, InvaderType.Watchit};
         public void NextWave()
         {
             wave++;
             playerShots.Clear();
             enemyShots.Clear();
             invaders = new List<Invader>();
-            InvaderType type = InvaderType.Bug;
+            InvaderType type = InvaderType.Bug + (wave % Configurables.INVADER_TURNOVER_INTERVAL);
             for (int y = 50; y < 250; y += 80)
             {
                 for (int x = 50; x < 600; x += 80)
