@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="Configurables.cs" />
     <Compile Include="Direction.cs" />
+    <Compile Include="Explosions.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>

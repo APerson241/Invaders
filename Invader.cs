@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Invaders
 {
-    class Invader
+    public class Invader
     {
         public Point Location;
         public InvaderType Type { get; private set; }

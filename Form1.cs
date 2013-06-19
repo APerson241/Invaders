@@ -100,6 +100,10 @@ namespace Invaders
                 game.FireShot();
             if (e.KeyCode == Keys.R)
                 game.RestartRequested();
+            if (e.KeyCode == Keys.U)
+                game.UpgradeRequested();
+            if (game.UpgradesOpen && e.KeyCode == Keys.D1 || e.KeyCode == Keys.D2 || e.KeyCode == Keys.D3)
+                game.UpgradeRequested(e.KeyCode);
             if (keysPressed.Contains(e.KeyCode))
                 keysPressed.Remove(e.KeyCode);
             keysPressed.Add(e.KeyCode);
@@ -113,7 +117,7 @@ namespace Invaders
 
         private void Form1_MouseClick(object sender, MouseEventArgs e)
         {
-            MessageBox.Show("Location: " + e.Location.ToString());
+            if (Configurables.SHOW_LOCATION_ON_CLICK) MessageBox.Show("Location: " + e.Location.ToString());
         }
     }
 }

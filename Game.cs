@@ -4,11 +4,17 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Invaders
 {
     public class Game
     {
+        private int livesLeft = 2;
+        private int beans = 0;  // beans = in-game currency
+        private int beansGainedDueToScore = 0;
+        private int bulletLimitGained = 0;
+        private int guidedMissleLevel = 0;
         private int score; // DO NOT SET DIRECTLY!!
         public int Score
         {
@@ -18,17 +24,23 @@ namespace Invaders
                 score = value;
                 if (ScoreLeftUntilFree1Up <= 5)
                 {
-                    livesGainedDueToScore++;
-                    livesLeft++;
+                    beansGainedDueToScore++;
+                    beans++;
+                    explosions.SpawnExplosion(new Point(500, 100), new Size(), "+1 BEAN");
                 }
             }
         }
-        public int ScoreLeftUntilFree1Up { get {
-            return ((Configurables.SCORE_THRESHOLD_MULTIPLIER_FOR_FREE_1UP + livesGainedDueToScore * 10) *
-                (livesGainedDueToScore + 1)) - score;
+        public int Free1UpThreshold { get {
+                return ((Configurables.SCORE_THRESHOLD_MULTIPLIER_FOR_FREE_1UP + beansGainedDueToScore * 10) *
+                        (beansGainedDueToScore + 1));
         } }
-        private int livesLeft = 2;
-        private int livesGainedDueToScore = 0;
+        public int ScoreLeftUntilFree1Up { get {
+            return Free1UpThreshold - score;
+        } }
+        public double ScoreLeftPercentage { get {
+            return 100 - ((double)ScoreLeftUntilFree1Up / (double)(Free1UpThreshold -
+                    ((Configurables.SCORE_THRESHOLD_MULTIPLIER_FOR_FREE_1UP + beansGainedDueToScore * 10) * beansGainedDueToScore)) * 100);
+        } }
         private int wave = 0;
         private int framesSkipped = 5;
         private int currentFrame = 0;
@@ -40,24 +52,27 @@ namespace Invaders
         private Boolean invadersMovingDown = false;
         private const int invaderMargin = 10;
         private List<Invader> invaders = new List<Invader>();
+        public bool UpgradesOpen = false;
 
         private PlayerShip playerShip = new PlayerShip();
         private List<Shot> playerShots = new List<Shot>();
         private List<Shot> enemyShots = new List<Shot>();
-        
+
+        public Explosions explosions;
 
         public Boolean GameOver { get; private set; }
 
         private int livesLeftY;
-        private Font hudFont = new Font(FontFamily.GenericSansSerif, 14, FontStyle.Regular);
 
         public Game (Rectangle clientRectangle) {
             this.clientRectangle = clientRectangle;
+            explosions = new Explosions(clientRectangle);
             livesLeftY = clientRectangle.Y + clientRectangle.Height - Properties.Resources.player.Height - 10;
         }
 
         public void Go(Random random)
         {
+            if (UpgradesOpen) return;
             MoveInvaders();
             UpdateShots();
             CheckForInvaderCollisions();
@@ -72,6 +87,7 @@ namespace Invaders
 
         public void Draw(Graphics g, int animationCell)
         {
+            explosions.Draw(g);
             foreach (Invader invader in invaders)
                 invader.Draw(g, animationCell);
             playerShip.Draw(g);
@@ -79,13 +95,38 @@ namespace Invaders
                 shot.Draw(g);
             foreach (Shot shot in enemyShots)
                 shot.Draw(g);
-            g.DrawString(score.ToString() + "(" + ScoreLeftUntilFree1Up + " left until free 1up)", hudFont, Brushes.White, 10, 10);
-            g.DrawString("Wave " + wave, hudFont, Brushes.White, 10, clientRectangle.Bottom - 30);
+            #region upper-left-corner
+            g.DrawString(score.ToString(), Configurables.HUD_FONT, Brushes.White, 10, 10);
+            float scoreLeftOffset = 20 + g.MeasureString(score.ToString(), Configurables.HUD_FONT).Width;
+            g.FillRectangle(Brushes.Orange, scoreLeftOffset, 10, (float)((ScoreLeftPercentage<0?0:ScoreLeftPercentage) * 2), 23);
+            g.DrawRectangle(Pens.Purple, scoreLeftOffset, 10, 200, 23);
+            g.DrawString(Math.Round(ScoreLeftPercentage).ToString() + "%", Form1.DefaultFont, Brushes.White, scoreLeftOffset +
+                100 - g.MeasureString(Math.Round(ScoreLeftPercentage).ToString() + "%", Form1.DefaultFont).Width / 2, 15);
+            if (beans > 0 || UpgradesOpen)
+            {
+                g.DrawString(UpgradesOpen?"Close Store (Press U)":"Upgrades available! (Press U)", Form1.DefaultFont, Brushes.LightGreen, scoreLeftOffset + 210, 15);
+            }
+            #endregion
+            g.DrawString("Wave " + wave, Configurables.HUD_FONT, Brushes.White, 10, clientRectangle.Bottom - 30);
             int x = clientRectangle.X + clientRectangle.Width - Properties.Resources.player.Width - 20;
             for (int i = livesLeft; i > 0; i--)
             {
                 g.DrawImageUnscaled(Properties.Resources.player, new Point(x, livesLeftY));
                 x -= Properties.Resources.player.Width + 10;
+            }
+            if (UpgradesOpen)
+            {
+                g.FillRectangle(Configurables.SHOP_BACKGROUND, 50, 50, clientRectangle.Width - 100, clientRectangle.Height - 100);
+                g.DrawString("MR. SHOP", Configurables.BIGGER_FONT, Brushes.White, (clientRectangle.Width - 160) / 2, 60);
+                g.DrawString("You have " + beans + " bean" + (beans == 1 ? "" : "s") + ".", Configurables.HUD_FONT,
+                        Brushes.AntiqueWhite, clientRectangle.Right - 200, 70);
+                g.DrawString("Item\t\tDescription\t\t\tPrice\t\tPurchase", SystemFonts.IconTitleFont, Brushes.White, 60, 100);
+                g.DrawString("----\t\t-----------\t\t\t-----\t\t--------", SystemFonts.IconTitleFont, Brushes.White, 60, 120);
+                drawShopItem(g, "Extra Life", "Gives you an extra life\t", Configurables.EXTRA_LIFE_PRICE, 1);
+                drawShopItem(g, "More Bullets", "Increases your bullet limit to " + (Configurables.NUMBER_OF_PLAYER_SHOTS_ALLOWED +
+                        bulletLimitGained + 1), Configurables.BULLET_LIMIT_PRICE, 2);
+                drawShopItem(g, "Guided Missles", (guidedMissleLevel==0)?"Have fun!\t\t":"Increases level to " + (guidedMissleLevel +
+                    1), Configurables.GUIDED_MISSLE_BASE_PRICE + guidedMissleLevel, 3);
             }
             if (GameOver)
             {
@@ -100,6 +141,13 @@ namespace Invaders
                                        (int)(clientRectangle.Height - g.MeasureString("Press R to restart or Q to quit",
                                             smallerFont).Height + SEPARATION) / 2));
             }
+        }
+
+        private void drawShopItem(Graphics g, string name, string description, int price, int keyboardShortcut)
+        {
+            g.DrawString(name + "\t" + description + "\t" + price + " bean" + (price==1?"":"s") + "\t\t" + (beans>=price?"Press " +
+                    keyboardShortcut:"Insufficient beans"), SystemFonts.IconTitleFont, Brushes.White, 60, 140 +
+                    (keyboardShortcut - 1) * 20);
         }
 
         public void AddScore(int value)
@@ -137,7 +185,7 @@ namespace Invaders
 
         public void FireShot()
         {
-            if (playerShots.Count < Configurables.NUMBER_OF_PLAYER_SHOTS_ALLOWED)
+            if (playerShots.Count < (Configurables.NUMBER_OF_PLAYER_SHOTS_ALLOWED + bulletLimitGained))
             {
                 playerShots.Add(new Shot(playerShip.NewShotLocation, Direction.Up));
             }
@@ -154,8 +202,10 @@ namespace Invaders
         public void NextWave()
         {
             wave++;
+            explosions.SpawnExplosion(new Point(30, clientRectangle.Bottom - 30), new Size(), "+1");
             playerShots.Clear();
             enemyShots.Clear();
+            explosions.ClearAllExplosions();
             invaders = new List<Invader>();
             InvaderType type = InvaderType.Bug + (wave % Configurables.INVADER_TURNOVER_INTERVAL);
             for (int y = 50; y < 250; y += 80)
@@ -184,6 +234,7 @@ namespace Invaders
                     {
                         deadInvaders.Add(invader);
                         usedShots.Add(shot);
+                        explosions.SpawnExplosion(invader);
                     }
                 }
             }
@@ -271,6 +322,7 @@ namespace Invaders
             invaders.Clear();
             enemyShots.Clear();
             playerShots.Clear();
+            explosions.ClearAllExplosions();
         }
 
         public void RestartRequested()
@@ -281,9 +333,43 @@ namespace Invaders
                 score = 0;
                 framesSkipped = 6;
                 livesLeft = 2;
-                livesGainedDueToScore = 0;
+                beans = 0;
+                beansGainedDueToScore = 0;
+                bulletLimitGained = 0;
                 GameOver = false;
                 NextWave();
+            }
+        }
+
+        public void UpgradeRequested(Keys key=Keys.U)
+        {
+            if (UpgradesOpen)
+            {
+                if (key == Keys.U)
+                {
+                    UpgradesOpen = false;
+                    return;
+                }
+                else if (key == Keys.D1 && beans >= Configurables.EXTRA_LIFE_PRICE)
+                {
+                    livesLeft++;
+                    beans--;
+                }
+                else if (key == Keys.D2 && beans >= Configurables.BULLET_LIMIT_PRICE)
+                {
+                    bulletLimitGained++;
+                    beans -= Configurables.BULLET_LIMIT_PRICE;
+                }
+                else if (key == Keys.D3 && beans >= Configurables.GUIDED_MISSLE_BASE_PRICE + guidedMissleLevel)
+                {
+                    guidedMissleLevel++;
+                    beans -= Configurables.GUIDED_MISSLE_BASE_PRICE;
+                }
+                if (beans == 0) UpgradesOpen = false;
+            }
+            if (beans > 0 && !GameOver)
+            {
+                UpgradesOpen = true;
             }
         }
     }
