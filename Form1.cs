@@ -15,7 +15,7 @@ namespace Invaders
         private Stars stars;
         private Game game;
         private Random random;
-        private bool gameStarted = false;
+        public static bool GameStarted = false;
 
         List<Keys> keysPressed = new List<Keys>();
 
@@ -26,7 +26,8 @@ namespace Invaders
             InitializeComponent();
             random = new Random();
             stars = new Stars(ClientRectangle);
-            game = new Game(ClientRectangle);
+            game = Game.GetInstance();
+            game.setClientRectangle(ClientRectangle);
             game.NextWave();
         }
 
@@ -35,7 +36,7 @@ namespace Invaders
             Graphics g = e.Graphics;
             g.FillRectangle(Brushes.Black, 0, 0, Width, Height);
             stars.Draw(g);
-            if (gameStarted)
+            if (GameStarted)
                 game.Draw(g, animationCell);
             else
                 drawSplashScreen(g);
@@ -89,9 +90,9 @@ namespace Invaders
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
-            if (!gameStarted && e.KeyCode == Keys.S)
+            if (!GameStarted && e.KeyCode == Keys.S)
             {
-                gameStarted = true;
+                GameStarted = true;
                 return;
             }
             if (e.KeyCode == Keys.Q)

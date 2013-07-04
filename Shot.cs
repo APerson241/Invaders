@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Drawing;
 
 namespace Invaders
 {
-    class Shot
+    public class Shot
     {
         public Point Location;
-        private Direction upOrDown;
+        internal Direction upOrDown;
         public static Size SIZE = new Size(4, 12);
         public static int MOVE_INTERVAL = 3;
 

@@ -10,6 +10,7 @@ namespace Invaders
 {
     public class Game
     {
+        private static Game instance;
         private int livesLeft = 2;
         private int beans = 0;  // beans = in-game currency
         private int beansGainedDueToScore = 0;
@@ -42,32 +43,52 @@ namespace Invaders
                     ((Configurables.SCORE_THRESHOLD_MULTIPLIER_FOR_FREE_1UP + beansGainedDueToScore * 10) * beansGainedDueToScore)) * 100);
         } }
         private int wave = 0;
+        private DateTime waveStarted;
         private int framesSkipped = 5;
         private int currentFrame = 0;
 
         private Rectangle clientRectangle;
         private Random random = new Random();
 
+        /// <summary>
+        /// What direction the invaders are currently moving in - either LEFT or RIGHT.
+        /// </summary>
         private Direction invaderDirection = Direction.Right;
-        private Boolean invadersMovingDown = false;
-        private const int invaderMargin = 10;
+        private Direction directionInvadersJustMovedIn = Direction.Right;
+        private const int INVADER_MARGIN = 10;
         private List<Invader> invaders = new List<Invader>();
         public bool UpgradesOpen = false;
 
         private PlayerShip playerShip = new PlayerShip();
+        public Point ShipLocation { get { return playerShip.Location; } }
         private List<Shot> playerShots = new List<Shot>();
         private List<Shot> enemyShots = new List<Shot>();
 
         public Explosions explosions;
 
         public Boolean GameOver { get; private set; }
+        
+        private int waveAnnouncementAlpha { get { return ((DateTime.Now - waveStarted).TotalSeconds >= 5)?0:255 -
+                (int)Math.Round((DateTime.Now - waveStarted).TotalSeconds * (255 / 3)); } }
+        private string[] inspirationalMessages = new string[] {"You passed the first level!  Congratulations!",
+                "Enjoy: 50-point invaders!", "Having fun yet?", "Rockets!  Gotta have them!"};
 
-        private int livesLeftY;
-
-        public Game (Rectangle clientRectangle) {
+        public void setClientRectangle(Rectangle clientRectangle)
+        {
             this.clientRectangle = clientRectangle;
+        }
+
+        private Game () {
             explosions = new Explosions(clientRectangle);
-            livesLeftY = clientRectangle.Y + clientRectangle.Height - Properties.Resources.player.Height - 10;
+        }
+
+        public static Game GetInstance()
+        {
+            if (instance == null)
+            {
+                instance = new Game();
+            }
+            return instance;
         }
 
         public void Go(Random random)
@@ -90,6 +111,9 @@ namespace Invaders
             explosions.Draw(g);
             foreach (Invader invader in invaders)
                 invader.Draw(g, animationCell);
+            if (Configurables.SHOW_INVADER_HITBOXES)
+                foreach (Invader invader in invaders)
+                    g.DrawRectangle(Pens.Olive, invader.Hitbox);
             playerShip.Draw(g);
             foreach (Shot shot in playerShots)
                 shot.Draw(g);
@@ -104,22 +128,24 @@ namespace Invaders
                 100 - g.MeasureString(Math.Round(ScoreLeftPercentage).ToString() + "%", Form1.DefaultFont).Width / 2, 15);
             if (beans > 0 || UpgradesOpen)
             {
-                g.DrawString(UpgradesOpen?"Close Store (Press U)":"Upgrades available! (Press U)", Form1.DefaultFont, Brushes.LightGreen, scoreLeftOffset + 210, 15);
+                g.DrawString(UpgradesOpen?"Close Store (Press U)":"Upgrades available! (Press U)", Form1.DefaultFont,
+                    UpgradesOpen?Brushes.LightGoldenrodYellow:Brushes.LightGreen, scoreLeftOffset + 210, 15);
             }
             #endregion
             g.DrawString("Wave " + wave, Configurables.HUD_FONT, Brushes.White, 10, clientRectangle.Bottom - 30);
             int x = clientRectangle.X + clientRectangle.Width - Properties.Resources.player.Width - 20;
             for (int i = livesLeft; i > 0; i--)
             {
-                g.DrawImageUnscaled(Properties.Resources.player, new Point(x, livesLeftY));
+                g.DrawImageUnscaled(Properties.Resources.player, new Point(x, clientRectangle.Bottom - Properties.Resources.player.Height - 5));
                 x -= Properties.Resources.player.Width + 10;
             }
             if (UpgradesOpen)
             {
                 g.FillRectangle(Configurables.SHOP_BACKGROUND, 50, 50, clientRectangle.Width - 100, clientRectangle.Height - 100);
                 g.DrawString("MR. SHOP", Configurables.BIGGER_FONT, Brushes.White, (clientRectangle.Width - 160) / 2, 60);
-                g.DrawString("You have " + beans + " bean" + (beans == 1 ? "" : "s") + ".", Configurables.HUD_FONT,
-                        Brushes.AntiqueWhite, clientRectangle.Right - 200, 70);
+                g.DrawString("You have    " + beans + " bean" + (beans == 1 ? "" : "s") + ".", Configurables.HUD_FONT,
+                        Brushes.AntiqueWhite, 70, 70);
+                g.FillEllipse(Brushes.LightGreen, clientRectangle.Right - 210, 70, 5, 5);
                 g.DrawString("Item\t\tDescription\t\t\tPrice\t\tPurchase", SystemFonts.IconTitleFont, Brushes.White, 60, 100);
                 g.DrawString("----\t\t-----------\t\t\t-----\t\t--------", SystemFonts.IconTitleFont, Brushes.White, 60, 120);
                 drawShopItem(g, "Extra Life", "Gives you an extra life\t", Configurables.EXTRA_LIFE_PRICE, 1);
@@ -127,6 +153,18 @@ namespace Invaders
                         bulletLimitGained + 1), Configurables.BULLET_LIMIT_PRICE, 2);
                 drawShopItem(g, "Guided Missles", (guidedMissleLevel==0)?"Have fun!\t\t":"Increases level to " + (guidedMissleLevel +
                     1), Configurables.GUIDED_MISSLE_BASE_PRICE + guidedMissleLevel, 3);
+            }
+            if (waveAnnouncementAlpha > 0)
+            {
+                const int MARGIN_BETWEEN_LINES_OF_TEXT = 50;
+                Brush brush = (new Pen(Color.FromArgb(waveAnnouncementAlpha, Color.White))).Brush;
+                g.DrawString("WAVE " + wave, Configurables.MASSIVE_FONT, brush, (clientRectangle.Right -
+                        g.MeasureString("Wave " + wave, Configurables.MASSIVE_FONT).Width) / 2, (clientRectangle.Bottom -
+                        g.MeasureString("Wave " + wave, Configurables.MASSIVE_FONT).Height) / 2 - MARGIN_BETWEEN_LINES_OF_TEXT);
+                if (wave >= 2 && wave < 10)
+                    g.DrawString(inspirationalMessages[wave - 2], Configurables.BIGGER_FONT, brush, (clientRectangle.Right -
+                            g.MeasureString(inspirationalMessages[wave - 2], Configurables.BIGGER_FONT).Width) / 2, (clientRectangle.Bottom -
+                            g.MeasureString(inspirationalMessages[wave - 2], Configurables.BIGGER_FONT).Height) / 2 + MARGIN_BETWEEN_LINES_OF_TEXT);
             }
             if (GameOver)
             {
@@ -202,6 +240,7 @@ namespace Invaders
         public void NextWave()
         {
             wave++;
+            waveStarted = DateTime.Now;
             explosions.SpawnExplosion(new Point(30, clientRectangle.Bottom - 30), new Size(), "+1");
             playerShots.Clear();
             enemyShots.Clear();
@@ -264,6 +303,14 @@ namespace Invaders
                 OnGameOver();
         }
 
+        private bool invadersShouldMoveDown { get {
+            foreach (Invader invader in invaders)
+                if (invader.Hitbox.Right >= clientRectangle.Right - INVADER_MARGIN)
+                    return true;
+                else if (invader.Location.X <= INVADER_MARGIN)
+                    return true;
+            return false; } }
+
         private void MoveInvaders()
         {
             if (framesSkipped > 0)
@@ -274,28 +321,18 @@ namespace Invaders
                 else
                     return;
             }
-            Direction shouldMove = invaderDirection; // What direction the invaders should move in this round
-            if (!invadersMovingDown)
+            if (invadersShouldMoveDown && directionInvadersJustMovedIn != Direction.Down)
             {
+                invaderDirection = (invaderDirection == Direction.Left) ? Direction.Right : Direction.Left;
                 foreach (Invader invader in invaders)
-                {
-                    if (invader.Location.X + invader.Hitbox.Width >= clientRectangle.X + clientRectangle.Width - (invaderMargin + 10))
-                    {
-                        shouldMove = Direction.Down;
-                        invaderDirection = Direction.Left;
-                        break;
-                    }
-                    else if (invader.Location.X <= invaderMargin)
-                    {
-                        shouldMove = Direction.Down;
-                        invaderDirection = Direction.Right;
-                        break;
-                    }
-                }
+                    invader.Move(Direction.Down);
+                directionInvadersJustMovedIn = Direction.Down;
             }
-            invadersMovingDown = shouldMove == Direction.Down;
-            foreach (Invader invader in invaders)
-                invader.Move(shouldMove);
+            else {
+                foreach (Invader invader in invaders)
+                    invader.Move(invaderDirection);
+                directionInvadersJustMovedIn = invaderDirection;
+            }
         }
 
         private void ReturnFire()
@@ -309,8 +346,13 @@ namespace Invaders
                                     select invaderGroup;
             var chosenInvaderGroup = invaderGroups.ToList()[random.Next(invaderGroups.ToList().Count - 1)];
             Invader chosenInvader = chosenInvaderGroup.Last() as Invader;
-            enemyShots.Add(new Shot(new Point(chosenInvader.Location.X + (int)(chosenInvader.Hitbox.Width / 2),
-                chosenInvader.Location.Y + chosenInvader.Hitbox.Height), Direction.Down));
+            /*
+            if (wave >= 5 && random.Next(5) <= 1)
+                enemyShots.Add(new GuidedMissle(new Point(chosenInvader.Location.X + (int)(chosenInvader.Hitbox.Width / 2),
+                    chosenInvader.Location.Y + chosenInvader.Hitbox.Height), Direction.Down));
+            else
+                */enemyShots.Add(new Shot(new Point(chosenInvader.Location.X + (int)(chosenInvader.Hitbox.Width / 2),
+                    chosenInvader.Location.Y + chosenInvader.Hitbox.Height), Direction.Down));
         }
 
         /// <summary>
