@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Boss.cs" />
     <Compile Include="Configurables.cs" />
     <Compile Include="Direction.cs" />
     <Compile Include="Explosions.cs" />

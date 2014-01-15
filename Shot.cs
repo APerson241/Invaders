@@ -15,13 +15,13 @@ namespace Invaders
             this.upOrDown = direction;
         }
 
-        public void Draw(Graphics g)
+        public virtual void Draw(Graphics g)
         {
             g.FillRectangle((upOrDown == Direction.Up)?Brushes.Orange:Brushes.Red, Location.X - (int)(SIZE.Width/2),
                 Location.Y - (int)(SIZE.Height/2), SIZE.Width, SIZE.Height);
         }
 
-        public void Move()
+        public virtual void Move()
         {
             if (upOrDown == Direction.Up)
                 Location.Y -= MOVE_INTERVAL;

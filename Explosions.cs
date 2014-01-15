@@ -20,6 +20,7 @@ namespace Invaders
         }
 
         public void Draw(Graphics g) {
+            RemoveRetiredExplosions();
             foreach (Explosion explosion in explosions)
                 explosion.Draw(g);
         }
@@ -39,6 +40,23 @@ namespace Invaders
             explosions.Clear();
         }
 
+        public void RemoveRetiredExplosions()
+        {
+            List<int> indicesToKill = new List<int>();
+            int i = 0;
+            foreach (Explosion explosion in explosions) {
+                if (explosion.Retired) {
+                    indicesToKill.Add(i);
+                }
+                i++;
+            }
+            foreach (int index in indicesToKill)
+            {
+                if (explosions.Count > index)
+                    explosions.RemoveAt(index);
+            }
+        }
+
         private struct Explosion
         {
             public Point Point;
@@ -48,6 +66,7 @@ namespace Invaders
             private DateTime created;
             public DateTime Created { get { return created; } }
             public double AgeInSeconds { get { return (DateTime.Now - Created).TotalSeconds; } }
+            public Boolean Retired { get { return AgeInSeconds >= 2; } }
             public String Text;
 
             public Explosion(Point point, Size size, string text="")

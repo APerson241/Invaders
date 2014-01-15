@@ -16,6 +16,7 @@ namespace Invaders
         private Game game;
         private Random random;
         public static bool GameStarted = false;
+        public static bool GameReady = false;
 
         List<Keys> keysPressed = new List<Keys>();
 
@@ -39,21 +40,38 @@ namespace Invaders
             if (GameStarted)
                 game.Draw(g, animationCell);
             else
-                drawSplashScreen(g);
+                if (GameReady)
+                    drawSplashScreen(g, "Instructions", "Avoid bullets. Shoot invaders.",
+                        "Arrow keys to move. Space to fire. That's it. (Press S to start.)", 70);
+                else
+                    drawSplashScreen(g, "INVADERS", "Press S to start or Q to quit.", "");
         }
-
-        private void drawSplashScreen(Graphics g)
+        
+        /// <summary>
+        /// Draws a splash screen with 3 lines, centered in the screen.
+        /// </summary>
+        /// <param name="g">A GDI+ drawing surface.</param>
+        /// <param name="title">The top line of text, drawn in a bigger font.</param>
+        /// <param name="line1">The middle line of text.</param>
+        /// <param name="line2">The bottom line of text.</param>
+        /// <param name="separation">Half the vertical separation between the first two lines of text.</param>
+        private void drawSplashScreen(Graphics g, string title, string line1, string line2, int separation=50)
         {
-            const int SEPARATION = 50; // Half of the vertical separation between the two lines of text.
-            using (Font bigFont = new Font(FontFamily.GenericSansSerif, 72, FontStyle.Regular))
-                g.DrawString("INVADERS", bigFont, Brushes.White,
-                        new Point((int)(ClientRectangle.Width - g.MeasureString("INVADERS", bigFont).Width) / 2,
-                                   (int)(ClientRectangle.Height - g.MeasureString("INVADERS", bigFont).Height - SEPARATION) / 2));
+            using (Font bigFont = new Font(FontFamily.GenericSansSerif, (line2 != "")?48:72, FontStyle.Regular))
+                g.DrawString(title, bigFont, Brushes.White,
+                        new Point((int)(ClientRectangle.Width - g.MeasureString(title, bigFont).Width) / 2,
+                                   (int)(ClientRectangle.Height - g.MeasureString(title, bigFont).Height - separation) / 2));
             using (Font smallerFont = new Font(FontFamily.GenericSansSerif, 14, FontStyle.Regular))
-                g.DrawString("Press S to begin or Q to quit", smallerFont, Brushes.White,
-                        new Point((int)(ClientRectangle.Width - g.MeasureString("Press S to begin or Q to quit", smallerFont).Width) / 2,
-                                   (int)(ClientRectangle.Height - g.MeasureString("Press S to begin or Q to quit",
-                                        smallerFont).Height + SEPARATION) / 2));
+            {
+                g.DrawString(line1, smallerFont, Brushes.White,
+                        new Point((int)(ClientRectangle.Width - g.MeasureString(line1, smallerFont).Width) / 2,
+                                   (int)(ClientRectangle.Height - g.MeasureString(line1,
+                                        smallerFont).Height + separation) / 2));
+                g.DrawString(line2, smallerFont, Brushes.White,
+                        new Point((int)(ClientRectangle.Width - g.MeasureString(line2, smallerFont).Width) / 2,
+                                   (int)(ClientRectangle.Height - g.MeasureString(line2,
+                                        smallerFont).Height + separation * 2) / 2));
+            }
         }
 
         private void gameTimer_Tick(object sender, EventArgs e)
@@ -92,7 +110,10 @@ namespace Invaders
         {
             if (!GameStarted && e.KeyCode == Keys.S)
             {
-                GameStarted = true;
+                if (!GameReady)
+                    GameReady = true;
+                else
+                    GameStarted = true;
                 return;
             }
             if (e.KeyCode == Keys.Q)
@@ -103,8 +124,8 @@ namespace Invaders
                 game.RestartRequested();
             if (e.KeyCode == Keys.U)
                 game.UpgradeRequested();
-            if (game.UpgradesOpen && e.KeyCode == Keys.D1 || e.KeyCode == Keys.D2 || e.KeyCode == Keys.D3)
-                game.UpgradeRequested(e.KeyCode);
+            if (e.KeyCode == Keys.B)
+                game.SpawnBoss();
             if (keysPressed.Contains(e.KeyCode))
                 keysPressed.Remove(e.KeyCode);
             keysPressed.Add(e.KeyCode);
@@ -119,6 +140,12 @@ namespace Invaders
         private void Form1_MouseClick(object sender, MouseEventArgs e)
         {
             if (Configurables.SHOW_LOCATION_ON_CLICK) MessageBox.Show("Location: " + e.Location.ToString());
+            if (game.NotifyMeOfMouseEvents) game.OnMouseClick(e.Location);
+        }
+
+        private void Form1_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (game.NotifyMeOfMouseEvents) game.OnMouseMove(e.Location);
         }
     }
 }
